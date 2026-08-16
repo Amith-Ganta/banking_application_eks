@@ -59,24 +59,24 @@ variable "cluster_version" {
 }
 
 variable "node_instance_types" {
-  description = "Managed node group instance types. t3.xlarge (4 vCPU/16 GB) fits the full stack (32 app pods + Postgres/Kafka/Redis + kube-prometheus-stack + Loki + Tempo + OTel + Argo CD)."
+  description = "Managed node group instance types. AWS account is on the Free Plan (blocks non-free-tier types like t3.xlarge), so pinned to m7i-flex.large (2 vCPU/8 GB, free-tier-eligible on this account) as a stopgap. Too small for the full 32-pod stack + observability + Argo CD — revisit once the account is upgraded off the Free Plan."
   type        = list(string)
-  default     = ["t3.xlarge"]
+  default     = ["m7i-flex.large"]
 }
 
 variable "node_min_size" {
   type    = number
-  default = 3
+  default = 1
 }
 
 variable "node_max_size" {
   type    = number
-  default = 6
+  default = 2
 }
 
 variable "node_desired_size" {
   type    = number
-  default = 4
+  default = 1
 }
 
 variable "ecr_repository_name" {
