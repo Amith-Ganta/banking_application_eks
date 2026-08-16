@@ -363,7 +363,7 @@ postgres:
 ingress:
   enabled: true
   className: traefik
-  host: vijaygiduthuri.in
+  host: banking-platform.example
   tls: true # cert-manager auto-issues banking-tls via ingress-shim
   tlsSecretName: banking-tls
   clusterIssuer: letsencrypt-prod

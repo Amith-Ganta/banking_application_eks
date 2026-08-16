@@ -88,7 +88,7 @@ variable "ecr_repository_name" {
 variable "domain_name" {
   description = "Apex domain hosted in Route 53 (delegated from GoDaddy)."
   type        = string
-  default     = "vijaygiduthuri.in"
+  default     = "banking-platform.example"
 }
 
 variable "create_apex_record" {

@@ -133,7 +133,7 @@ Sensible defaults are set; the ones you might change:
 | `node_min/max/desired`| `3 / 6 / 4`          | Managed node group autoscaling bounds                |
 | `single_nat_gateway`  | `true`               | One NAT (cheap) for dev; prod uses one per AZ        |
 | `ecr_repository_name` | `banking-platform`   | The single ECR repo all services push to             |
-| `domain_name`         | `vijaygiduthuri.in`  | Apex domain hosted in Route 53 (delegated from GoDaddy) |
+| `domain_name`         | `banking-platform.example`  | Apex domain hosted in Route 53 (delegated from GoDaddy) |
 | `create_apex_record`  | `false`              | Phase 5 flips this to `true` to add the apex ALIAS → NLB |
 
 > 💡 **Sizing reality:** 30 Go services + gateway + Postgres/Redis/Kafka +

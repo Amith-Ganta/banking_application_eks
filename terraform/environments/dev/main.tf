@@ -48,10 +48,10 @@ module "s3_documents" {
   bucket_name = "${var.name}-documents-${data.aws_caller_identity.current.account_id}"
 }
 
-# DNS is out of scope for this environment: the repo's default domain
-# (vijaygiduthuri.in) belongs to the instructor, not this account, so the
-# route53 module (and its hosted-zone cost) is disabled here. See
-# docs/aws/05-dns-godaddy.md if you later want to wire up your own domain.
+# DNS is out of scope for this environment: var.domain_name is just a
+# placeholder (no real domain is owned/delegated yet), so the route53 module
+# (and its hosted-zone cost) is disabled here. See docs/aws/05-dns-godaddy.md
+# if you later want to wire up your own domain.
 # module "route53" {
 #   source = "../../modules/route53"
 #
