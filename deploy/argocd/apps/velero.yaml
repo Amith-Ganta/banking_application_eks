@@ -29,12 +29,12 @@ spec:
           server:
             name: velero # MUST be "velero" to match the IRSA trust (velero:velero)
             annotations:
-              eks.amazonaws.com/role-arn: arn:aws:iam::118178010323:role/banking-dev-velero-irsa
+              eks.amazonaws.com/role-arn: arn:aws:iam::651103158261:role/banking-dev-velero-irsa
         configuration:
           backupStorageLocation:
             - name: default
               provider: aws
-              bucket: banking-velero-backups-118178010323
+              bucket: banking-velero-backups-651103158261
               config:
                 region: us-east-1
           volumeSnapshotLocation:
