@@ -9,7 +9,6 @@
 [![ArgoCD](https://img.shields.io/badge/GitOps-Argo%20CD-EF7B4D?logo=argo&logoColor=white)](https://argo-cd.readthedocs.io)
 [![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?logo=terraform&logoColor=white)](https://www.terraform.io)
 [![OpenTelemetry](https://img.shields.io/badge/traces-OpenTelemetry-000000?logo=opentelemetry&logoColor=white)](https://opentelemetry.io)
-[![License](https://img.shields.io/badge/license-Personal_%26_Educational_Use-orange.svg)](LICENSE)
 
 > A production-grade, enterprise-style **banking platform** built as **30 Go
 > microservices** + an API gateway + a React frontend, deployed on **Amazon EKS**
@@ -370,19 +369,3 @@ docker compose -f docker-compose.yaml up --build
 - **HPAs** scale each service on CPU/memory (backed by metrics-server).
 
 ---
-
-## License
-
-**Banking Platform — Personal & Educational Use License** — see [LICENSE](LICENSE).
-
-| | |
-|---|---|
-| ✅ **Free, no permission needed** | Clone, fork, run on your own laptop / cloud account for personal study. Modify for your own non-commercial use. Reference the architecture in your own work, with attribution. |
-| ❌ **Permission required** | Videos / screencasts / paid courses / tutorials featuring this project. Books or paid newsletters copying the code or docs. Any commercial reuse (selling, re-hosting as a paid service). |
-| 📩 **Want to make educational content?** | Email **vijaygiduthuri67@gmail.com** with who you are, what you'll make, where you'll publish, and whether it's paid or free. Educational creators with clear attribution are welcome. |
-
-This project was built as a learning artifact for **cloud / DevOps / platform / SRE
-engineers** and stays free for that purpose. The restriction is on repackaging it
-as your own content — not on you learning from it.
-
-> Note: this is a **source-available** license, not an OSI-approved open-source license.
