@@ -42,7 +42,11 @@ module "eks" {
   cluster_addons = {
     coredns    = {}
     kube-proxy = {}
-    vpc-cni    = {}
+    vpc-cni = {
+      # Default VPC CNI does not enforce Kubernetes NetworkPolicy resources —
+      # without this, any NetworkPolicy manifest applied via GitOps is a silent no-op.
+      configuration_values = jsonencode({ enableNetworkPolicy = "true" })
+    }
   }
 
   tags = var.tags
@@ -100,4 +104,58 @@ resource "aws_eks_addon" "ebs_csi" {
 
   # Needs nodes to schedule the controller/daemonset onto.
   depends_on = [module.eks]
+}
+
+# ---------------------------------------------------------------------------
+# External Secrets Operator IRSA — lets ESO read real secret values out of AWS
+# Secrets Manager and materialize them as Kubernetes Secrets, replacing the
+# plaintext stringData blocks committed in values.yaml. Installed via GitOps
+# (Helm chart + ClusterSecretStore Argo app); this role is what its
+# ServiceAccount assumes.
+# ---------------------------------------------------------------------------
+data "aws_iam_policy_document" "external_secrets_assume" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [module.eks.oidc_provider_arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${module.eks.oidc_provider}:sub"
+      values   = ["system:serviceaccount:external-secrets:external-secrets"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${module.eks.oidc_provider}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "external_secrets_read" {
+  statement {
+    effect = "Allow"
+    actions = [
+      "secretsmanager:GetSecretValue",
+      "secretsmanager:DescribeSecret",
+    ]
+    resources = ["arn:aws:secretsmanager:*:*:secret:banking/*"]
+  }
+}
+
+resource "aws_iam_role" "external_secrets" {
+  name               = "${var.cluster_name}-external-secrets-irsa"
+  assume_role_policy = data.aws_iam_policy_document.external_secrets_assume.json
+  tags               = var.tags
+}
+
+resource "aws_iam_role_policy" "external_secrets_read" {
+  name   = "${var.cluster_name}-external-secrets-read"
+  role   = aws_iam_role.external_secrets.id
+  policy = data.aws_iam_policy_document.external_secrets_read.json
 }

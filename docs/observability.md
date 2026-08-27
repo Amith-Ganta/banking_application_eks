@@ -68,3 +68,24 @@ helm upgrade banking deploy/helm/banking-platform -n banking \
 Grafana: `admin` / `admin` (dev). Dashboards: the kube-prometheus-stack bundle
 (cluster/nodes/pods) plus **Banking Platform — Services** (request rate, p95
 latency, error rate).
+
+## SLOs and alerting
+
+The platform's stated SLOs, enforced by `deploy/observability/manifests/prometheusrule.yaml`
+(a `PrometheusRule` picked up by kube-prometheus-stack, synced via the
+`observability-extras` Argo app):
+
+| SLO | Threshold | Alert |
+|---|---|---|
+| Availability (error rate) | ≥ 99.5% of requests non-5xx, per service, 5m window | `BankingPlatformHighErrorRate` (warning, 10m sustained) |
+| Latency | p99 request latency < 1s, per service, 5m window | `BankingPlatformHighLatencyP99` (warning, 10m sustained) |
+| Reachability | every banking-namespace scrape target is up | `BankingPlatformServiceScrapeDown` (critical, 5m) |
+
+These sit alongside kube-prometheus-stack's default cluster-health rules
+(`KubePodCrashLooping`, `KubeContainerOOMKilled`, node/etcd/API-server alerts,
+etc., enabled by the chart's `defaultRules`) — the custom rules above cover the
+*application* SLOs the default rules don't know about. Alerts fire to
+Alertmanager (`/alertmanager` on the apex host); no external receiver
+(PagerDuty/Slack) is wired up yet — evaluate in the Alertmanager UI or extend
+`deploy/observability/values/kube-prometheus-stack.yaml`'s `alertmanager.config`
+to add one.

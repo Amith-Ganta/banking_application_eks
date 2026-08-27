@@ -37,12 +37,25 @@ s3:
   enabled: "false"
   region: us-east-1
   bucket: banking-documents
-# DEV DEFAULTS ONLY — override per environment / use a secrets manager.
+# DEV DEFAULTS ONLY — used verbatim when externalSecrets.enabled is false
+# (kind/local clusters, no ESO installed). On EKS this is overridden by
+# externalSecrets.enabled: true and the values below are never rendered.
 secrets:
   dbUser: banking
   dbPassword: banking
   jwtSecret: dev-secret-change-me
   jwtIssuer: banking-platform
+# Set true on EKS (via the Argo CD Application's helm.values, see
+# deploy/argocd/apps/banking-platform.yaml) to source every service's
+# credentials from AWS Secrets Manager through External Secrets Operator
+# instead of the plaintext `secrets` block above. Requires ESO + the
+# ClusterSecretStore to be installed first — see
+# deploy/argocd/apps/external-secrets.yaml and
+# deploy/cluster/external-secrets/cluster-secret-store.yaml.
+externalSecrets:
+  enabled: false
+  clusterSecretStore: aws-secrets-manager
+  secretsManagerKey: banking/shared-credentials
 # ---------------------------------------------------------------------------
 # Backend microservices (each listens on :8080, /healthz /readyz /startupz)
 # ---------------------------------------------------------------------------

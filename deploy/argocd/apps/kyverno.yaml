@@ -1,0 +1,32 @@
+# Kyverno: admission controller. Paired with deploy/cluster/kyverno (image
+# verification ClusterPolicy) to enforce that only cosign-signed images from
+# our CI (see .github/workflows/ci.yaml) can run in the banking namespace.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: banking
+  source:
+    repoURL: https://kyverno.github.io/kyverno/
+    chart: kyverno
+    targetRevision: 3.3.6 # pinned; bump deliberately after testing
+    helm:
+      values: |
+        replicaCount: 2
+        resources:
+          requests: { cpu: 50m, memory: 128Mi }
+          limits: { cpu: 500m, memory: 512Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true # CRDs exceed the annotation size limit → server-side apply

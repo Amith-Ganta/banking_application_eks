@@ -109,19 +109,7 @@ data:
   OTEL_EXPORTER_OTLP_INSECURE: {{ .Values.otel.insecure | quote }}
   LEDGER_GRPC_ADDR: "ledger-service:{{ .Values.ledgerService.grpcPort }}"
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: loan-service-secret
-  namespace: {{ .Values.namespace }}
-  labels:
-    app: loan-service
-type: Opaque
-stringData:
-  POSTGRES_USER: {{ .Values.secrets.dbUser | quote }}
-  POSTGRES_PASSWORD: {{ .Values.secrets.dbPassword | quote }}
-  JWT_SECRET: {{ .Values.secrets.jwtSecret | quote }}
-  JWT_ISSUER: {{ .Values.secrets.jwtIssuer | quote }}
+{{ include "banking-platform.dbJwtSecret" (dict "root" $ "name" "loan-service-secret" "app" "loan-service") }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

@@ -99,17 +99,7 @@ data:
   OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.otel.endpoint | quote }}
   OTEL_EXPORTER_OTLP_INSECURE: {{ .Values.otel.insecure | quote }}
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: api-gateway-secret
-  namespace: {{ .Values.namespace }}
-  labels:
-    app: api-gateway
-type: Opaque
-stringData:
-  JWT_SECRET: {{ .Values.secrets.jwtSecret | quote }}
-  JWT_ISSUER: {{ .Values.secrets.jwtIssuer | quote }}
+{{ include "banking-platform.jwtOnlySecret" (dict "root" $ "name" "api-gateway-secret" "app" "api-gateway") }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

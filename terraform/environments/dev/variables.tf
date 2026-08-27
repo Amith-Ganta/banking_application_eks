@@ -96,3 +96,15 @@ variable "create_apex_record" {
   type        = bool
   default     = false
 }
+
+variable "github_org" {
+  description = "GitHub org/user for the CI OIDC trust policy."
+  type        = string
+  default     = "Amith-Ganta"
+}
+
+variable "github_repo" {
+  description = "GitHub repo name for the CI OIDC trust policy."
+  type        = string
+  default     = "banking_application_eks"
+}

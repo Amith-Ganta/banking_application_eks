@@ -1,0 +1,54 @@
+# SLO alert rules for the banking-platform services, scoped to the metrics
+# emitted by pkg/httpserver's PrometheusMiddleware (http_requests_total,
+# http_request_duration_seconds, labels: service/method/path/status).
+# Picked up by the same ServiceMonitor-scraping Prometheus (release label
+# matches the kube-prometheus-stack Release name; ruleSelectorNilUsesHelmValues
+# is false so any PrometheusRule in the cluster is selected regardless of label,
+# but the label is kept for consistency with servicemonitor.yaml).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: banking-platform-slo
+  namespace: banking
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: banking-platform.slo
+      rules:
+        # SLO: 99.5% of requests succeed (non-5xx) over a 5m window, per service.
+        - alert: BankingPlatformHighErrorRate
+          expr: |
+            (
+              sum by (service) (rate(http_requests_total{status=~"5.."}[5m]))
+              /
+              sum by (service) (rate(http_requests_total[5m]))
+            ) > 0.005
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.service }} error rate above SLO (0.5%)"
+            description: "{{ $labels.service }} has a 5xx rate of {{ $value | humanizePercentage }} over the last 5m, above the 0.5% error-rate SLO."
+        # SLO: p99 request latency under 1s, per service.
+        - alert: BankingPlatformHighLatencyP99
+          expr: |
+            histogram_quantile(0.99,
+              sum by (service, le) (rate(http_request_duration_seconds_bucket[5m]))
+            ) > 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.service }} p99 latency above SLO (1s)"
+            description: "{{ $labels.service }} p99 request latency is {{ $value | humanizeDuration }} over the last 5m, above the 1s latency SLO."
+        # Catches a service going fully unresponsive faster than the generic
+        # cluster-wide TargetDown default rule (5% down cluster-wide threshold).
+        - alert: BankingPlatformServiceScrapeDown
+          expr: up{job=~".*", namespace="banking"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "{{ $labels.job }} is not being scraped"
+            description: "Prometheus has not been able to scrape {{ $labels.job }} in the banking namespace for 5m — the service is likely down."

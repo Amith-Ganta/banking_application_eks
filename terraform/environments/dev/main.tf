@@ -17,7 +17,10 @@ module "vpc" {
 module "iam" {
   source = "../../modules/iam"
 
-  name = var.name
+  name               = var.name
+  create_github_oidc = true # only env that creates the account's one GitHub OIDC provider
+  github_org         = var.github_org
+  github_repo        = var.github_repo
 }
 
 module "eks" {

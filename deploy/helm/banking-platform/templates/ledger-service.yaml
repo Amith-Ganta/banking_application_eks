@@ -115,19 +115,7 @@ data:
   GRPC_ENABLED: "true"
   GRPC_PORT: "{{ .Values.ledgerService.grpcPort }}"
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ledger-service-secret
-  namespace: {{ .Values.namespace }}
-  labels:
-    app: ledger-service
-type: Opaque
-stringData:
-  POSTGRES_USER: {{ .Values.secrets.dbUser | quote }}
-  POSTGRES_PASSWORD: {{ .Values.secrets.dbPassword | quote }}
-  JWT_SECRET: {{ .Values.secrets.jwtSecret | quote }}
-  JWT_ISSUER: {{ .Values.secrets.jwtIssuer | quote }}
+{{ include "banking-platform.dbJwtSecret" (dict "root" $ "name" "ledger-service-secret" "app" "ledger-service") }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

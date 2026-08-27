@@ -1,0 +1,17 @@
+{{- range $key, $val := .Values }}
+{{- if and (kindIs "map" $val) (hasKey $val "deploymentname") }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $val.servicename }}-pdb
+  namespace: {{ $.Values.namespace }}
+  labels:
+    app: {{ $val.servicename }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: {{ $val.servicename }}
+---
+{{- end }}
+{{- end }}

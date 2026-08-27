@@ -1,6 +1,9 @@
 name: Terraform CI
 
-# Format-check and validate the Terraform (no credentials, nothing applied).
+# validate: format-check + validate the Terraform (no credentials, nothing applied).
+# plan: read-only `terraform plan` against real state via the OIDC role
+# (terraform/modules/iam's github_actions role — ReadOnlyAccess only), posted
+# as a PR comment. Only a human ever runs `terraform apply`.
 on:
   push:
     branches: [main]
@@ -28,3 +31,81 @@ jobs:
         run: terraform -chdir=terraform/environments/${{ matrix.env }} init -backend=false -input=false
       - name: validate
         run: terraform -chdir=terraform/environments/${{ matrix.env }} validate
+
+  plan:
+    name: plan (${{ matrix.env }})
+    runs-on: ubuntu-latest
+    needs: validate
+    permissions:
+      contents: read
+      id-token: write # assume the AWS role via OIDC
+      pull-requests: write # post/update the plan comment
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [dev, qa, prod]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_GITHUB_ACTIONS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: terraform init
+        working-directory: terraform/environments/${{ matrix.env }}
+        run: terraform init -input=false
+
+      - name: terraform plan
+        id: plan
+        working-directory: terraform/environments/${{ matrix.env }}
+        continue-on-error: true
+        run: terraform plan -input=false -no-color -out=tfplan 2>&1 | tee plan_output.txt
+
+      - name: Read plan output for comment
+        id: plan_text
+        if: always()
+        working-directory: terraform/environments/${{ matrix.env }}
+        run: |
+          {
+            echo 'PLAN<<PLAN_EOF'
+            tail -c 60000 plan_output.txt
+            echo PLAN_EOF
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = `<!-- tf-plan-${{ matrix.env }} -->`;
+            const body = `${marker}\n#### Terraform Plan — \`${{ matrix.env }}\`\n<details><summary>Show plan</summary>\n\n\`\`\`\n${{ steps.plan_text.outputs.PLAN }}\n\`\`\`\n</details>`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find((c) => c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Fail job if plan errored
+        if: steps.plan.outcome == 'failure'
+        run: exit 1

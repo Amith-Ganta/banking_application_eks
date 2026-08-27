@@ -16,6 +16,13 @@ spec:
     helm:
       valueFiles:
         - values.yaml
+      # EKS only: source credentials from AWS Secrets Manager via External
+      # Secrets Operator instead of the plaintext `secrets` block in
+      # values.yaml (that block stays the default for local kind clusters,
+      # which deploy via `helm install` directly, not Argo CD).
+      values: |
+        externalSecrets:
+          enabled: true
   destination:
     server: https://kubernetes.default.svc
     namespace: banking

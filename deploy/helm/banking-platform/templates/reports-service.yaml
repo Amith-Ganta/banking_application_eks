@@ -108,19 +108,7 @@ data:
   OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.otel.endpoint | quote }}
   OTEL_EXPORTER_OTLP_INSECURE: {{ .Values.otel.insecure | quote }}
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: reports-service-secret
-  namespace: {{ .Values.namespace }}
-  labels:
-    app: reports-service
-type: Opaque
-stringData:
-  POSTGRES_USER: {{ .Values.secrets.dbUser | quote }}
-  POSTGRES_PASSWORD: {{ .Values.secrets.dbPassword | quote }}
-  JWT_SECRET: {{ .Values.secrets.jwtSecret | quote }}
-  JWT_ISSUER: {{ .Values.secrets.jwtIssuer | quote }}
+{{ include "banking-platform.dbJwtSecret" (dict "root" $ "name" "reports-service-secret" "app" "reports-service") }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

@@ -1,0 +1,36 @@
+# Verifies every banking-platform image carries a valid cosign keyless
+# signature from OUR GitHub Actions workflow before it can run — closes the
+# supply-chain loop on the cosign sign + syft SBOM attest steps in
+# .github/workflows/ci.yaml (those steps only produce signatures; nothing
+# checked them until this policy exists).
+#
+# Starts in Audit (log + allow) rather than Enforce: this is a new control
+# plane dependency (admission calls out to Fulcio/Rekor on every pod create),
+# so the senior-safe rollout is to watch `kyverno logs`/PolicyReports for a
+# burn-in period before flipping validationFailureAction to Enforce.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-banking-platform-images
+spec:
+  validationFailureAction: Audit
+  background: false
+  webhookTimeoutSeconds: 30
+  rules:
+    - name: verify-cosign-keyless-signature
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [banking]
+      verifyImages:
+        - imageReferences:
+            - "651103158261.dkr.ecr.us-east-1.amazonaws.com/banking-platform:*"
+          mutateDigest: true
+          attestors:
+            - entries:
+                - keyless:
+                    issuer: "https://token.actions.githubusercontent.com"
+                    subject: "https://github.com/Amith-Ganta/banking_application_eks/.github/workflows/ci.yaml@refs/heads/main"
+                    rekor:
+                      url: https://rekor.sigstore.dev

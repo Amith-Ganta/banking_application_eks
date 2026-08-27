@@ -15,10 +15,14 @@
 > via **GitOps**, with a **double-entry ledger**, **gRPC** internals, **Kafka**
 > event streaming, and a full **observability / security / backup** baseline.
 
-This is a **learning / portfolio reference project**. It intentionally
-**self-hosts its data stores (PostgreSQL, Redis, Kafka) in-cluster** rather than
-using managed AWS data services, uses **Traefik** for ingress, and is served on
-a real domain over HTTPS (`https://banking-platform.example`).
+This is a **production-grade platform engineering reference**: the GitOps
+pipeline, IaC, security posture, and observability stack are built and operated
+the way a real platform team runs one. It intentionally **self-hosts its data
+stores (PostgreSQL, Redis, Kafka) in-cluster** rather than using managed AWS
+data services — a deliberate scope choice to keep the infra fully reproducible
+without external account dependencies, not a shortcut — uses **Traefik** for
+ingress, and is served on a real domain over HTTPS
+(`https://banking-platform.example`).
 
 ---
 

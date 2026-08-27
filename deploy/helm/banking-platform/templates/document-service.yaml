@@ -111,19 +111,7 @@ data:
   AWS_REGION: {{ .Values.s3.region | quote }}
   S3_BUCKET: {{ .Values.s3.bucket | quote }}
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: document-service-secret
-  namespace: {{ .Values.namespace }}
-  labels:
-    app: document-service
-type: Opaque
-stringData:
-  POSTGRES_USER: {{ .Values.secrets.dbUser | quote }}
-  POSTGRES_PASSWORD: {{ .Values.secrets.dbPassword | quote }}
-  JWT_SECRET: {{ .Values.secrets.jwtSecret | quote }}
-  JWT_ISSUER: {{ .Values.secrets.jwtIssuer | quote }}
+{{ include "banking-platform.dbJwtSecret" (dict "root" $ "name" "document-service-secret" "app" "document-service") }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler

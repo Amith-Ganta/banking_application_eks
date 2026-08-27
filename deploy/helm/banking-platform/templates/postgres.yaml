@@ -24,11 +24,10 @@ spec:
           ports:
             - name: postgres
               containerPort: {{ .Values.postgres.port }}
+          envFrom:
+            - secretRef:
+                name: postgres-secret
           env:
-            - name: POSTGRES_USER
-              value: {{ .Values.secrets.dbUser | quote }}
-            - name: POSTGRES_PASSWORD
-              value: {{ .Values.secrets.dbPassword | quote }}
             - name: POSTGRES_DB
               value: {{ .Values.db.name | quote }}
             - name: PGDATA
@@ -37,7 +36,7 @@ spec:
             - name: data
               mountPath: /var/lib/postgresql/data
           readinessProbe:
-            exec: { command: ["sh", "-c", "pg_isready -U {{ .Values.secrets.dbUser }} -d {{ .Values.db.name }}"] }
+            exec: { command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d {{ .Values.db.name }}"] }
             initialDelaySeconds: 5
             periodSeconds: 10
           resources:
@@ -54,6 +53,8 @@ spec:
         resources:
           requests:
             storage: {{ .Values.postgres.storage }}
+---
+{{ include "banking-platform.dbOnlySecret" (dict "root" $ "name" "postgres-secret" "app" "postgres") }}
 ---
 apiVersion: v1
 kind: Service

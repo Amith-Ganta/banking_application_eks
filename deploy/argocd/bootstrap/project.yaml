@@ -17,6 +17,8 @@ spec:
     - "https://charts.jetstack.io"
     - "https://kubernetes-sigs.github.io/metrics-server/"
     - "https://vmware-tanzu.github.io/helm-charts"
+    - "https://charts.external-secrets.io"
+    - "https://kyverno.github.io/kyverno/"
   destinations:
     - { server: https://kubernetes.default.svc, namespace: banking }
     - { server: https://kubernetes.default.svc, namespace: observability }
@@ -24,6 +26,8 @@ spec:
     - { server: https://kubernetes.default.svc, namespace: argocd }
     - { server: https://kubernetes.default.svc, namespace: kube-system }
     - { server: https://kubernetes.default.svc, namespace: velero }
+    - { server: https://kubernetes.default.svc, namespace: external-secrets }
+    - { server: https://kubernetes.default.svc, namespace: kyverno }
   # The chart spans cluster-scoped resources (CRDs, ClusterRoles, etc.), so allow all.
   clusterResourceWhitelist:
     - { group: "*", kind: "*" }

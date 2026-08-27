@@ -2,9 +2,13 @@
 # Banking Platform CI/CD — AWS variant (Amazon ECR)
 # -----------------------------------------------------------------------------=
 # Pipeline overview:
+#   test           : go build/vet/fmt + `go test` (go.work root) + `helm lint` —
+#                    gates build, catches broken code before the expensive
+#                    31-way Docker build+scan matrix runs.
 #   build          : matrix over ALL services + frontend -> docker build (Buildx
 #                    + GHA layer cache), Trivy scan (HIGH/CRITICAL), push to a
-#                    single ECR repository (tags: <service>-<sha>, <service>-latest).
+#                    single ECR repository (tags: <service>-<sha>, <service>-latest),
+#                    cosign keyless-sign + syft SBOM attach (push path only).
 #   update-gitops  : on push to main only -> bump the per-service image string in
 #                    deploy/helm/banking-platform/values.yaml and commit it back.
 #                    Argo CD (not this pipeline) performs the actual deployment.
@@ -13,16 +17,18 @@
 # strictly Argo CD's responsibility. The only "deploy" action is the git commit
 # of updated image strings.
 #
+# AWS auth is via GitHub OIDC (terraform/modules/iam's github_actions role) —
+# no static AWS_ACCESS_KEY_ID/SECRET anywhere in this pipeline.
+#
 # Required GitHub configuration:
 #   Secrets:
-#     AWS_ACCESS_KEY_ID     - IAM user access key (with the ECR push policy)
-#     AWS_SECRET_ACCESS_KEY - matching secret access key
 #     GITOPS_TOKEN          - (optional) PAT with contents:write if branch
 #                             protection blocks the default GITHUB_TOKEN
 #   Variables:
-#     AWS_REGION     - e.g. us-east-1
-#     ECR_REGISTRY   - e.g. <account>.dkr.ecr.us-east-1.amazonaws.com
-#     ECR_REPOSITORY - e.g. banking-platform   (single repo; images differ by tag)
+#     AWS_REGION               - e.g. us-east-1
+#     AWS_GITHUB_ACTIONS_ROLE_ARN - output of `terraform output github_actions_role_arn`
+#     ECR_REGISTRY              - e.g. <account>.dkr.ecr.us-east-1.amazonaws.com
+#     ECR_REPOSITORY            - e.g. banking-platform (single repo; images differ by tag)
 # =============================================================================
 name: CI (AWS / ECR)
 
@@ -65,6 +71,46 @@ env:
 
 jobs:
   # ===========================================================================
+  # test: compile + static-analysis gate for the whole go.work workspace, plus
+  # a helm chart lint. Cheap and fast — runs before the expensive build matrix.
+  # ===========================================================================
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+
+      - name: go build ./...
+        run: go build ./...
+
+      - name: go vet ./...
+        run: go vet ./...
+
+      - name: gofmt -l
+        run: |
+          UNFORMATTED="$(gofmt -l .)"
+          if [ -n "$UNFORMATTED" ]; then
+            echo "The following files are not gofmt-formatted:"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
+
+      - name: go test ./...
+        run: go test ./...
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: helm lint
+        run: helm lint deploy/helm/banking-platform
+
+  # ===========================================================================
   # build: build, scan and push every image IN PARALLEL via a matrix.
   # Backend services share one Dockerfile (build/service.Dockerfile + SERVICE
   # build-arg); the frontend has its own Dockerfile.
@@ -72,6 +118,10 @@ jobs:
   build:
     name: build (${{ matrix.service }})
     runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      id-token: write # required to assume the AWS role via OIDC and for cosign keyless signing
     strategy:
       fail-fast: false
       matrix:
@@ -130,11 +180,10 @@ jobs:
             echo "buildargs=SERVICE=${{ matrix.service }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ vars.AWS_GITHUB_ACTIONS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -171,6 +220,7 @@ jobs:
 
       # Push only after a clean scan, only on push to main. PRs build+scan (gate).
       - name: Push image to ECR
+        id: push
         if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v6
         with:
@@ -182,6 +232,39 @@ jobs:
             ${{ env.IMAGE_PREFIX }}:${{ matrix.service }}-${{ steps.vars.outputs.sha }}
             ${{ env.IMAGE_PREFIX }}:${{ matrix.service }}-latest
           cache-from: type=gha,scope=${{ matrix.service }}
+
+      # Keyless signing (Sigstore/Fulcio) — no key material to manage or leak.
+      # Signs by digest so both tags pushed above are covered.
+      - name: Install cosign
+        if: steps.push.outcome == 'success'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image (cosign keyless)
+        if: steps.push.outcome == 'success'
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: cosign sign --yes "${{ env.IMAGE_PREFIX }}@${{ steps.push.outputs.digest }}"
+
+      # SBOM: generate + attach as a signed attestation so the image's exact
+      # dependency graph is queryable/verifiable later (`cosign verify-attestation`).
+      - name: Generate SBOM (syft)
+        if: steps.push.outcome == 'success'
+        uses: anchore/sbom-action@v0
+        with:
+          image: "${{ env.IMAGE_PREFIX }}@${{ steps.push.outputs.digest }}"
+          format: spdx-json
+          output-file: sbom-${{ matrix.service }}.spdx.json
+          upload-artifact: false
+
+      - name: Attach SBOM attestation (cosign)
+        if: steps.push.outcome == 'success'
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign attest --yes \
+            --predicate sbom-${{ matrix.service }}.spdx.json \
+            --type spdxjson \
+            "${{ env.IMAGE_PREFIX }}@${{ steps.push.outputs.digest }}"
 
   # ===========================================================================
   # update-gitops: bump per-service image strings in values.yaml + commit.

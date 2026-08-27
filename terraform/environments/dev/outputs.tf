@@ -38,6 +38,16 @@ output "documents_bucket" {
   value = module.s3_documents.bucket_name
 }
 
+output "github_actions_role_arn" {
+  description = "Configure this as the AWS_GITHUB_ACTIONS_ROLE_ARN GitHub Actions variable — CI assumes it via OIDC, no static AWS keys."
+  value       = module.iam.github_actions_role_arn
+}
+
+output "external_secrets_irsa_role_arn" {
+  description = "IRSA role ARN assumed by the External Secrets Operator service account."
+  value       = module.eks.external_secrets_irsa_role_arn
+}
+
 # route53 module disabled for this environment — see main.tf.
 # output "route53_zone_id" {
 #   value = module.route53.zone_id
