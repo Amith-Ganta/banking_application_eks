@@ -164,8 +164,7 @@ jobs:
           scan-type: image
           image-ref: ${{ env.IMAGE_PREFIX }}:${{ matrix.service }}-${{ steps.vars.outputs.sha }}
           format: table
-          # exit-code: "1" # would FAIL the build on fixable HIGH/CRITICAL
-          exit-code: "0" # report-only: Trivy still scans + prints, never blocks (learning setup)
+          exit-code: "1" # FAILS the build on fixable HIGH/CRITICAL — real gate, not report-only
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           vuln-type: os,library

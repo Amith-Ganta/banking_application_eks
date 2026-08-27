@@ -1,0 +1,12 @@
+; Copy to inventory.ini and fill in your bootstrap host (a fresh Ubuntu/Debian
+; EC2 instance or similar — NOT the EKS worker nodes, NOT your local machine).
+; This host needs outbound internet access and an IAM role/credentials with
+; permission to run `aws eks update-kubeconfig` and deploy to the cluster.
+;
+; Don't have a host yet? `terraform/bootstrap` provisions one for you —
+; including the IAM role and EKS access entry it needs — see
+; ../terraform/bootstrap/README.md. Then:
+;   ansible_host = $(cd ../terraform/bootstrap && terraform output -raw public_ip)
+;   ansible_ssh_private_key_file = the .pem for the key_pair_name you passed it
+[banking_bootstrap]
+bootstrap-host ansible_host=<EC2_PUBLIC_IP_OR_DNS> ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/<your-key>.pem

@@ -4,6 +4,8 @@ dist/
 *.exe
 *.out
 app
+*.tar.gz
+velero-v*/
 
 # Go
 vendor/
@@ -45,6 +47,9 @@ tmp/
 # Local-only notes (never pushed)
 PROJECT_PROGRESS.md
 docs/aws/RUNBOOK.md
+
+# Ansible (real inventory has host IPs/SSH keys; the .example template ships)
+ansible/inventory.ini
 
 # Terraform plan output files
 tfplan

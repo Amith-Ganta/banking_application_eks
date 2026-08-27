@@ -1,0 +1,11 @@
+# Bootstrap has its OWN state (separate key in the same bucket), so it can be
+# applied/destroyed independently of the Phase-1 infra state.
+terraform {
+  backend "s3" {
+    bucket       = "banking-eks-tfstate-651103158261"
+    key          = "dev/bootstrap.tfstate"
+    region       = "us-east-1"
+    use_lockfile = true
+    encrypt      = true
+  }
+}

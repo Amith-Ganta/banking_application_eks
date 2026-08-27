@@ -161,21 +161,51 @@ means the NLB isn't fully provisioned yet — re-check `kubectl get svc` in ~60 
 
 ## Step 4 — Reach the Traefik dashboard
 
-The dashboard is at `/dashboard/` + `/api` via the auto-created IngressRoute.
-**Trailing slash required**:
+`ingressRoute.dashboard.enabled=true` alone is **not** enough to reach the
+dashboard over the NLB: the chart binds the auto-created IngressRoute to
+Traefik's internal `traefik` entrypoint (admin port 9000) by default, which
+the NLB never forwards. `curl http://<NLB>/dashboard/` returns `404` until
+you explicitly move it onto the public entrypoints — and because that makes
+the debug UI internet-reachable, do it together with basic-auth, not before:
+
+```bash
+# 1. BasicAuth credentials, as a Secret Traefik's Middleware CRD can reference
+htpasswd_line="admin:$(openssl passwd -apr1 '<choose-a-password>')"
+kubectl create secret generic traefik-dashboard-auth \
+  -n traefik --from-literal=users="$htpasswd_line"
+
+# 2. Middleware wrapping that Secret
+kubectl apply -f - <<'EOF'
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: dashboard-basicauth
+  namespace: traefik
+spec:
+  basicAuth:
+    secret: traefik-dashboard-auth
+EOF
+
+# 3. Move the dashboard onto web/websecure and attach the middleware
+helm upgrade traefik traefik/traefik -n traefik --reuse-values \
+  --set-json 'ingressRoute.dashboard.entryPoints=["web","websecure"]' \
+  --set 'ingressRoute.dashboard.middlewares[0].name=dashboard-basicauth' \
+  --set 'ingressRoute.dashboard.middlewares[0].namespace=traefik'
+```
 
 ```bash
 curl -sI -o /dev/null -w "%{http_code}\n" "http://${NLB}/dashboard/"
+# Expect: 401 (no credentials)
+curl -s -o /dev/null -w "%{http_code}\n" -u admin:<password> "http://${NLB}/dashboard/"
 # Expect: 200
 ```
 
-Open `http://<NLB>/dashboard/` in a browser →
+Open `http://<NLB>/dashboard/` in a browser (trailing slash required), log in
+with the BasicAuth credentials →
 - **Routers** — configured `IngressRoute`s, matchers, middlewares
 - **Services** — backend Services Traefik forwards to
-- **Middlewares** — installed middlewares (none until later phases)
-
-⚠️ **Production note:** lock the dashboard behind basic-auth or an IP allowlist
-(or don't expose it). Fine open on a learning cluster.
+- **Middlewares** — installed middlewares (`dashboard-basicauth` plus any
+  added in later phases)
 
 ---
 
@@ -223,7 +253,7 @@ You now have a working ingress controller. Next phases add **what to route**:
 | A **Classic ELB** appeared, not an NLB | Missing/typo'd `aws-load-balancer-type=nlb` annotation | Fix the annotation, `helm upgrade`, delete the stray LB/Service. |
 | NLB created but **internal**, not internet-facing | Public subnets not tagged `kubernetes.io/role/elb=1` | The `vpc` module sets this; confirm the tags on the public subnets. |
 | `curl http://<NLB>/` → `Connection refused` | Traefik pods not Ready → NLB has no healthy targets | `kubectl -n traefik get pods`; `describe`/`logs` a failing pod. |
-| `curl …/dashboard/` → 404 | Dashboard IngressRoute disabled | `helm upgrade traefik traefik/traefik -n traefik --reuse-values --set ingressRoute.dashboard.enabled=true` |
+| `curl …/dashboard/` → 404 | Dashboard IngressRoute disabled, **or** enabled but still bound to the internal `traefik` entrypoint (chart default) | Enable it, then follow Step 4 to move it onto `web`/`websecure` + basic-auth. |
 | App IngressRoutes match but 404 anyway | Traefik can't see the route's namespace | Traefik 3.x watches all namespaces by default; if restricted, set `providers.kubernetesCRD.allowCrossNamespace=true`. |
 | `helm install` → `resource mapping not found` | Stale Traefik CRDs from a prior install | `kubectl get crd | grep traefik.io`; delete stale ones (⚠️ also deletes dependent IngressRoutes) on a clean cluster only. |
 

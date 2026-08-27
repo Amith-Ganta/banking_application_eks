@@ -88,6 +88,13 @@ What these flags do:
 | `configs.params.server\.rootpath=/argocd` | Serve the UI under `/argocd`. The IngressRoute matches the same prefix. |
 | `--wait --timeout=5m` | Block until all pods are Ready. |
 
+> **Windows / Git Bash:** MSYS auto-converts any argument that looks like a
+> POSIX path, so `/argocd` silently becomes `C:/Program Files/Git/argocd`
+> even inside the quotes above — `helm get values argocd -n argocd` will show
+> the mangled path if this bites you. Either run the install from WSL/a real
+> Linux shell, prefix the command with `MSYS_NO_PATHCONV=1`, or pass a
+> `-f values.yaml` file instead of `--set` for this flag.
+
 Expect the Argo CD pods Running:
 ```bash
 kubectl -n argocd get pods

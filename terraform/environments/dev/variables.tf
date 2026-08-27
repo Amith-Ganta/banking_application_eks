@@ -71,12 +71,12 @@ variable "node_min_size" {
 
 variable "node_max_size" {
   type    = number
-  default = 2
+  default = 6
 }
 
 variable "node_desired_size" {
   type    = number
-  default = 1
+  default = 5
 }
 
 variable "ecr_repository_name" {

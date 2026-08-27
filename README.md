@@ -181,7 +181,7 @@ flowchart TB
   **Tempo** (traces); **Prometheus** scrapes `/metrics`; **Promtail** ships logs
   to **Loki**; **Grafana** ties all three together with a **per-service dashboard**.
 
-See [`docs/aws/`](docs/aws/) for the full phase-by-phase deployment guide (01–08).
+See [`docs/aws/`](docs/aws/) for the full phase-by-phase deployment guide (01–09).
 
 ---
 
@@ -288,7 +288,7 @@ https://banking-platform.example/alertmanager/ 🚨 Alertmanager
 | DNS | **Route 53** apex ALIAS (GoDaddy delegates nameservers) |
 | GitOps | **Argo CD** (App-of-Apps) |
 | Packaging | **Helm** umbrella chart (`deploy/helm/banking-platform/`) |
-| IaC | **Terraform** (`terraform/` — vpc, iam, eks, ecr, s3, route53; optional velero) |
+| IaC | **Terraform** (`terraform/` — vpc, iam, eks, ecr, s3, route53; optional velero, bootstrap) |
 | CI/CD | **GitHub Actions** — matrix build, Trivy scan, ECR push, values bump |
 | Metrics | **Prometheus** (kube-prometheus-stack) + **Grafana** |
 | Logs | **Loki + Promtail** |
@@ -312,13 +312,15 @@ banking_application_eks/
 ├── deploy/
 │   ├── helm/banking-platform/   # umbrella Helm chart (per-service YAML + flat values)
 │   ├── argocd/                  # App-of-Apps: bootstrap/ + apps/ (+ observability/)
-│   ├── cluster/                 # gp3 StorageClass, cert-manager ClusterIssuer
+│   ├── cluster/                 # gp3 StorageClass, cert-manager ClusterIssuer, Traefik dashboard auth
 │   └── observability/           # Prometheus/Grafana/Loki/Tempo/OTel values + dashboards
 ├── terraform/
-│   ├── modules/         # vpc · iam · eks · ecr · s3 · route53 · velero
+│   ├── modules/         # vpc · iam · eks · ecr · s3 · route53 · velero · bootstrap
 │   ├── environments/    # dev · qa · prod (dev is used here)
-│   └── velero/          # standalone, optional Velero stack (own state)
-├── docs/aws/            # 01–08 phase-by-phase deployment guides
+│   ├── velero/          # standalone, optional Velero stack (own state)
+│   └── bootstrap/       # standalone, optional: provisions the Ansible bastion host (own state)
+├── ansible/             # bootstrap playbook: provisions a bastion host and runs the Argo CD bootstrap
+├── docs/aws/            # 01–09 phase-by-phase deployment + post-deploy guides
 ├── .github/workflows/   # ci.yaml (build→ECR→bump) · terraform.yaml
 └── README.md
 ```
@@ -346,6 +348,7 @@ Follow the guides in order — [`docs/aws/`](docs/aws/):
 6. **[06](docs/aws/06-observability.md)** — Prometheus/Grafana/Loki/Tempo/OTel + metrics-server (HPA)
 7. **[07](docs/aws/07-https-tls.md)** — HTTPS/TLS (cert-manager + Let's Encrypt)
 8. **[08](docs/aws/08-velero.md)** — Backup & DR with Velero
+9. **[09](docs/aws/09-postgres-guide.md)** — Post-deploy companion: connecting to & querying the in-cluster PostgreSQL database
 
 ---
 

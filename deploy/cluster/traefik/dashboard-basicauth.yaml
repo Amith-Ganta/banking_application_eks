@@ -1,0 +1,28 @@
+# Traefik dashboard is off the Traefik IngressRoute's internal `traefik`
+# entrypoint by chart default (see docs/aws/02-traefik-ingress.md Step 4).
+# Exposing it on web/websecure makes it internet-reachable, so it must never
+# ship without this Middleware attached.
+#
+# The Secret below is a template, not a working credential — generate a real
+# htpasswd (apr1) line before applying:
+#   htpasswd_line="admin:$(openssl passwd -apr1 '<choose-a-password>')"
+#   kubectl create secret generic traefik-dashboard-auth -n traefik \
+#     --from-literal=users="$htpasswd_line" --dry-run=client -o yaml | kubectl apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: traefik-dashboard-auth
+  namespace: traefik
+type: Opaque
+stringData:
+  users: |
+    admin:$apr1$REPLACE$withARealHtpasswdHash/
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: dashboard-basicauth
+  namespace: traefik
+spec:
+  basicAuth:
+    secret: traefik-dashboard-auth
