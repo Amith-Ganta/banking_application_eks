@@ -86,11 +86,24 @@ jobs:
         with:
           go-version-file: go.work
 
+      # go.work's member modules each need `./...` resolved from their own
+      # directory — a flat `go build ./...` at the workspace root fails with
+      # "directory prefix . does not contain modules listed in go.work".
       - name: go build ./...
-        run: go build ./...
+        run: |
+          set -euo pipefail
+          for dir in $(go list -m -f '{{.Dir}}'); do
+            echo "== go build: ${dir} =="
+            (cd "${dir}" && go build ./...)
+          done
 
       - name: go vet ./...
-        run: go vet ./...
+        run: |
+          set -euo pipefail
+          for dir in $(go list -m -f '{{.Dir}}'); do
+            echo "== go vet: ${dir} =="
+            (cd "${dir}" && go vet ./...)
+          done
 
       - name: gofmt -l
         run: |
@@ -102,7 +115,12 @@ jobs:
           fi
 
       - name: go test ./...
-        run: go test ./...
+        run: |
+          set -euo pipefail
+          for dir in $(go list -m -f '{{.Dir}}'); do
+            echo "== go test: ${dir} =="
+            (cd "${dir}" && go test ./...)
+          done
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
