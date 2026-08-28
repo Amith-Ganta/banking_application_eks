@@ -12,9 +12,9 @@ import (
 // InMemory is a concurrency-safe in-memory user store (used when Postgres is
 // disabled).
 type InMemory struct {
-	mu       sync.RWMutex
-	byID     map[string]domain.User
-	byEmail  map[string]string // email -> id
+	mu      sync.RWMutex
+	byID    map[string]domain.User
+	byEmail map[string]string // email -> id
 }
 
 // NewInMemory builds an empty in-memory repository.

@@ -30,13 +30,13 @@ func New(repo repository.Repository, log *zap.Logger) *Service {
 // event is the union of the transaction and payment event shapes; fields absent
 // in a given event stay at their zero value.
 type event struct {
-	ID            string `json:"id"`
-	Type          string `json:"type"`
-	FromAccountID string `json:"from_account_id"`
-	ToAccountID   string `json:"to_account_id"`
+	ID             string `json:"id"`
+	Type           string `json:"type"`
+	FromAccountID  string `json:"from_account_id"`
+	ToAccountID    string `json:"to_account_id"`
 	PayerAccountID string `json:"payer_account_id"`
-	Amount        string `json:"amount"`
-	Currency      string `json:"currency"`
+	Amount         string `json:"amount"`
+	Currency       string `json:"currency"`
 }
 
 // Handle is the Kafka consumer callback: it applies fraud rules and records an

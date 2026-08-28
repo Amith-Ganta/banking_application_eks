@@ -9,8 +9,8 @@ import (
 
 	"go.uber.org/zap"
 
-	platformcfg "banking-platform/pkg/config"
 	"banking-platform/pkg/auth"
+	platformcfg "banking-platform/pkg/config"
 	"banking-platform/pkg/grpcserver"
 	"banking-platform/pkg/health"
 	"banking-platform/pkg/httpserver"
