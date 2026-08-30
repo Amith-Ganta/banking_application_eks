@@ -128,12 +128,14 @@ data "aws_iam_policy_document" "github_actions_assume" {
 
     # Restrict to: pushes to main (build+push+gitops job) and PRs from this repo
     # (build+scan + terraform plan jobs). No other ref/repo can assume this role.
+    # Wildcard suffix on org/repo tolerates GitHub's "owner@id/repo@id" sub format,
+    # which it emits instead of plain "owner/repo" once a repo/org has rename history.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/main",
-        "repo:${var.github_org}/${var.github_repo}:pull_request",
+        "repo:${var.github_org}*/${var.github_repo}*:ref:refs/heads/main",
+        "repo:${var.github_org}*/${var.github_repo}*:pull_request",
       ]
     }
   }
