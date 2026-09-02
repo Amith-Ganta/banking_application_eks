@@ -6,36 +6,36 @@ go 1.25.7
 use (
 	./pkg
 	./proto
-	./templates/service-template
+	./services/account-service
+	./services/admin-service
+	./services/analytics-service
+	./services/api-gateway
+	./services/audit-service
 	./services/auth-service
 	./services/authz-service
-	./services/customer-service
-	./services/profile-service
-	./services/kyc-service
-	./services/document-service
-	./services/ledger-service
-	./services/account-service
-	./services/transaction-service
 	./services/beneficiary-service
-	./services/payment-service
-	./services/wallet-service
-	./services/loan-service
+	./services/card-service
+	./services/currency-exchange-service
+	./services/customer-service
+	./services/document-service
+	./services/email-service
 	./services/emi-service
 	./services/fixed-deposit-service
-	./services/recurring-deposit-service
-	./services/card-service
-	./services/investment-service
-	./services/currency-exchange-service
-	./services/audit-service
-	./services/notification-service
 	./services/fraud-service
-	./services/statement-service
-	./services/email-service
-	./services/sms-service
+	./services/investment-service
+	./services/kyc-service
+	./services/ledger-service
+	./services/loan-service
+	./services/notification-service
+	./services/payment-service
+	./services/profile-service
+	./services/recurring-deposit-service
 	./services/reports-service
-	./services/analytics-service
 	./services/search-service
-	./services/api-gateway
+	./services/sms-service
+	./services/statement-service
 	./services/support-service
-	./services/admin-service
+	./services/transaction-service
+	./services/wallet-service
+	./templates/service-template
 )
